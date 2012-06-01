@@ -3,3 +3,7 @@ PINA_Homo_sapiens-20110628_minitab.txt
 *~
 .#*
 #*
+*.npy
+*.txt
+.DS_Store
+
