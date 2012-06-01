@@ -1,0 +1,6 @@
+[submodule "PINA_gene_folder_enrichment"]
+	path = PINA_gene_folder_enrichment
+	url = git@github.com:andrewdyates/PINA_gene_folder_enrichment.git
+[submodule "py_symmetric_matrix"]
+	path = py_symmetric_matrix
+	url = git@github.com:andrewdyates/py_symmetric_matrix
