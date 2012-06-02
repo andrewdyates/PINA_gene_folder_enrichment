@@ -27,12 +27,6 @@ import gzip
 import zipfile
 
 
-RX_GENE_NAME = re.compile("uniprotkb:([^)]*)\(gene name\)")
-
-GENE_RENAMES = {
-  'MO25 ALPHA': 'MO25',
-  'STRAD BETA': 'STRAB',
-}
 
 def clean(s):
   # leave spaces; handle them specifically

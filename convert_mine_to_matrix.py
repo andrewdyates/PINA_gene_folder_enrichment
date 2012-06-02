@@ -1,4 +1,8 @@
 #!/usr/bin/python
+"""EXAMPLE USE:
+
+$ python convert_mine_to_matrix.py ~/Dropbox/biostat/eqtl_data/GSE25935/gse25935.1.out GSE25935 write_varlist= rel_type="PCC2"
+"""
 import sys
 import re
 import numpy as np
@@ -31,7 +35,8 @@ def save_mine_to_matrix(fp, name="MINE", write_varlist=True, write_matrix=True, 
       row = line.split(',')
       # skip header lines
       if row[0] == "X var": continue
-      varset.add(clean(row[0])); varset.add(clean(row[1]))
+      varset.add(clean(row[0]))
+      varset.add(clean(row[1]))
       
     print "Writing %d variables." % len(varset)
     varlist = list(sorted(varset))
@@ -43,7 +48,7 @@ def save_mine_to_matrix(fp, name="MINE", write_varlist=True, write_matrix=True, 
   else:
     # Read from file
     varlist = []
-    fp_in = open("%s.varlist.txt" % name, 'r')
+    fp_in = open("%s.varlist.txt" % (name), 'r')
     for line in fp_in:
       varlist.append(line[:-1])
 
@@ -64,10 +69,10 @@ def save_mine_to_matrix(fp, name="MINE", write_varlist=True, write_matrix=True, 
 
   print "Writing matrix..."
   if write_matrix:
-    np.save("%s.matrix.npy" % name, M._m)
+    np.save("%s.%s.matrix.npy" % (name, rel_type), M._m)
 
 
 if __name__ == "__main__":
-  main(sys.argv[1], sys.argv[2], **dict([s.split('=') for s in sys.argv[3:]]))
+  main(mine_filename=sys.argv[1], study_name=sys.argv[2], **dict([s.split('=') for s in sys.argv[3:]]))
 
   
