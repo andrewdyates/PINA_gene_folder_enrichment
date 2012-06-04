@@ -1,8 +1,22 @@
 #!/usr/bin/python
 from __future__ import division
-"""
+"""Perform gene enrichment.
 
+TODO: 
+  - convert all files to "array objects"
+
+USEFUL COMMANDS:
+
+Truncate symmetric matrix to squareform array.
+from scipy.spatial.distance import squareform
+>>> Q = squareform(M, checks=False)
+http://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.squareform.html
+
+Load matlab data
+M = sio.loadmat('gse25935-matlab-correlations-all.mat') #WARNING! REMOVE COLS FROM OUTLIER PATIENT IN CORRESPONDING DATA!
+NOTE: this may load M as a dictionary if .mat contains multiple files.
 """
+from scipy.spatial.distance import squareform
 import numpy as np
 from py_symmetric_matrix import *
 import re
@@ -16,11 +30,19 @@ GENE_RENAMES = {
   'STRAD BETA': 'STRAB',
 }
 def clean(s):
-  # leave spaces; handle them specifically
+  """Standardize gene names to be all caps, alphanumeric."""
   s = re.sub('[^a-zA-Z0-9 ]', '', s.upper())
   if s in GENE_RENAMES:
     s = GENE_RENAMES[s]
+  # Loudly complain about spaces so that they can be handled specially
+  assert ' ' not in s
   return s
+
+def matlab_to_squareform(M):
+  """Truncate symmetric matrix (as numpy.ndarray) to numpy.squareform."""
+  return squareform(M, checks=False)
+
+  
 
 
 class EnrichedSet(object):
@@ -72,6 +94,22 @@ class EnrichedSet(object):
     # make all-pairs hash
     self.pairs_hash = set(["%s,%s" % (pair[0], pair[1]) for pair in self.pairs])
 
+  def exists(self, x, y):
+    """Return if x, y variable pair is in enriched set.
+
+    Args:
+      x: str of variable name
+      y: str of variable name
+    Returns: 
+      bool if (x,y) variable pair is in enriched set.
+    """
+    assert x in self.genes
+    assert y in self.genes
+    assert not x == y
+    if x > y:
+      x, y = y, x
+    return "%s,%s" % (x, y) in self.pairs_hash
+
 
 class DependencySet(object):
   """Dependecy matrices with rank order and variable lists.
@@ -95,10 +133,18 @@ class DependencySet(object):
     self.dependencies = {}
     self.n = len(self.varlist)
   
-  def add(self, name, matrix_filename, rank_filename):
-    """Add a dependency."""
-    M = np.load(matrix_filename)
-    Q = np.load(rank_filename)
+  def add(self, name, similarity_fname, rank_fname):
+    """Add a dependency matrix.
+
+    Args:
+      name: str of name of dependency type. 
+      similarity_fname: str of path to similarity matrix as numpy array
+        array is length (n choose 2), use sym_idx functions to index
+      rank_fname: str of path to ranks of similarity matrix as numpy array
+        array is length (n choose 2), use sym_idx functions to index
+    """
+    M = np.load(similarity_fname)
+    Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
 
   def get_overlap(self, enriched):
