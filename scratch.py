@@ -97,6 +97,7 @@ def load_pina_minitab(fp, name_col_a=2, name_col_b=3):
   return (GList_PPI, M_PPI)
 
 
+
 def load_varlist(varlist_fname):
   # load variable list
   fp = open(varlist_fname)

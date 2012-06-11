@@ -26,8 +26,10 @@ import re
 RX_GENE_NAME = re.compile("uniprotkb:([^)]*)\(gene name\)")
 # manual renaming
 GENE_RENAMES = {
-  'MO25 ALPHA': 'MO25',
-  'STRAD BETA': 'STRAB',
+  'MO25 ALPHA': 'MO25A',
+  'MO25 BETA': 'MO25B',
+  'STRAD BETA': 'STRADB',
+  'STRAD ALPHA': 'STRADA',
 }
 def clean(s):
   """Standardize gene names to be all caps, alphanumeric."""
@@ -35,14 +37,28 @@ def clean(s):
   if s in GENE_RENAMES:
     s = GENE_RENAMES[s]
   # Loudly complain about spaces so that they can be handled specially
-  assert ' ' not in s
+  assert ' ' not in s, s
   return s
 
 def matlab_to_squareform(M):
   """Truncate symmetric matrix (as numpy.ndarray) to numpy.squareform."""
   return squareform(M, checks=False)
 
-  
+def tab_to_varlist(tab_fname):
+  """Transform a .tab gene expression value matrix into a list of variables.
+
+  Args:
+    tab_fname: str of path to .tab MINE.jar ready matrix file
+  Returns:
+    [str] of cleaned variable names IN FILE ORDER
+  """ 
+  fp = open(tab_fname)
+  varlist = []
+  for line in fp:
+    if line[0] == "#": continue
+    var,c,cc = line.partition('\t')
+    varlist.append(clean(var))
+  return varlist
 
 
 class EnrichedSet(object):
@@ -128,8 +144,19 @@ class DependencySet(object):
   N_TOTAL_CONFIRMED = 41902435 # 9155 choose 2, 9155 intersecting genes
   N_CORRELATION_RANKS = 109655762
 
-  def __init__(self, varlist_filename):
-    self.varlist = [s.strip() for s in open(varlist_filename)]
+  def __init__(self, varlist_filename=None, varlist=None):
+    """Initialize dependency set with either filename or varlist.
+    Filename can either be a .tab matrix or [str] list but not both.
+
+    Args:
+      varlist_filename: str of path to ordered list of variables
+      varlist: [str] of variable names
+    """
+    assert bool(varlist_filename) != bool(varlist)
+    if varlist_filename:
+      self.varlist = tab_to_varlist(varlist_filename)
+    else:
+      self.varlist = varlist
     self.dependencies = {}
     self.n = len(self.varlist)
   
@@ -203,7 +230,7 @@ class DependencySet(object):
 	  r[name] = R[0][idx]
 	# add nonlinearity if possible
 	if 'mic' in self.dependencies and 'pcc2' in self.dependencies:
-	  r['mic-pcc2'] = r['mic'][idx] - r['pcc2'][idx]
+	  r['mic-pcc2'] = r['mic'] - r['pcc2']
 
 	# update enrichment
 	tmp = (n_confirmed / self.N_TOTAL_CONFIRMED) / \
@@ -218,4 +245,63 @@ class DependencySet(object):
         
     return top_enriched
 
+
+def to_floats(s):
+  try:
+    x = float(s)
+  except ValueError:
+    x = None
+  return x
+
+class TabData(object):
+  """GSE dataset .tab file representation with an index to rows.
+
+  Attributes:
+    col_titles = [str] of GSM sample name column titles in col order
+    rows = {str=>[float|None] of variable name to values in col order
+      var name cleaned using `clean`
+  """
+
+  def __init__(self, filename):
+    """Load .tab matrix file into self.
+
+    Args:
+      filename: str of filepath to .tab file.
+      clean: bool if to 'normalize' gene name
+    """
+    fp = open(filename)
+
+    self.rows = {}
     
+    for line in fp:
+      line = line.strip('\n')
+      if not line: continue
+
+      row = line.split('\t')
+      # handle headers
+      if line[0] == '#':
+        # get column headers
+        if "#GENE_SYMBOL" == line[0:len('#GENE_SYMBOL')]:
+          self.col_titles = row[1:]
+        continue
+      # add line
+      self.rows[clean(row[0])] = map(to_floats, row[1:])
+
+  def output(self, row_id):
+    row_id = clean(row_id)
+    try:
+      row = self.rows[row_id]
+    except KeyError:
+      return None
+    else:
+      return "\t".join([row_id] + row_to_strs(row))
+    
+    
+def row_to_strs(row):
+  line = []
+  for x in row:
+    if x is None:
+      line.append("")
+    else:
+      line.append("%.6f"%x)
+  return line
