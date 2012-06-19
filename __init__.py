@@ -228,12 +228,12 @@ class DependencySet(object):
     print len(overlapping_genes_set)
     print len(self.enriched.pairs)
 
-    # If no limit, count all pairs.
-    if limit is None:
-      limit = len(M)
-
     # For the top `limit` pairs, compute enrichment
-    for i in xrange(1,limit+1):
+    for i in xrange(1,len(M)+1):
+      # Break if n_counted is equal to limit. If no limit, count all pairs
+      if limit is not None and n_counted >= limit:
+        break
+      
       idx = Q[-i]
       x, y = inv_sym_idx(idx, self.n)
       pair = sorted((self.varlist[x], self.varlist[y]))
