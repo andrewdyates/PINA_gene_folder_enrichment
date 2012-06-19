@@ -64,6 +64,8 @@ def tab_to_varlist(tab_fname):
 class EnrichedSet(object):
   """Confirmed protein relationships.
 
+  NOTE: all variable names are "cleaned"!
+
   Attributes:
     pairs: [(str,str)] list of sorted ordered pairs of cleaned gene names
     genes: set(str): set of all gene names found in enrichment set
@@ -86,7 +88,7 @@ class EnrichedSet(object):
     fp = open(filename)
     fp.next()   # skip first header line
     # List of pairs and unique genes.
-  
+    
     for line_num, line in enumerate(fp):
       row = line[:-1].split('\t')
       s_a, s_b = (row[name_col_a], row[name_col_b])
@@ -129,7 +131,9 @@ class EnrichedSet(object):
 
 class DependencySet(object):
   """Dependecy matrices with rank order and variable lists.
-  NOTE: all associated variable names must be sorted
+  
+  REQUIRED: row and column order of numpy dependecy matrices must
+    be in the same order as the row order of .tab variable list.
 
   Attributes:
     varlist: [str] of sorted variable names corresponding to matrices.
@@ -137,18 +141,16 @@ class DependencySet(object):
     dependencies: {str=>(np.array(float), np.array(float)} of 
       relation=>(Value_Matrix, Rank_Matrix)
       matrices are symmetric representations; use sym_idx
+    enriched: corresponding `EnrichedSet` object
   """
   PLOT_TOP_K = 200
-  # XXX SUPER HACKY!
-  # FOR GSE25935
-  N_TOTAL_CONFIRMED = 41902435 # 9155 choose 2, 9155 intersecting genes
-  N_CORRELATION_RANKS = 109655762
 
-  def __init__(self, varlist_filename=None, varlist=None):
+  def __init__(self, enriched, varlist_filename=None, varlist=None):
     """Initialize dependency set with either filename or varlist.
     Filename can either be a .tab matrix or [str] list but not both.
 
     Args:
+      enriched: obj of `EnrichedSet`
       varlist_filename: str of path to ordered list of variables
       varlist: [str] of variable names
     """
@@ -157,6 +159,8 @@ class DependencySet(object):
       self.varlist = tab_to_varlist(varlist_filename)
     else:
       self.varlist = varlist
+    self.enriched = enriched
+    
     self.dependencies = {}
     self.n = len(self.varlist)
   
@@ -174,21 +178,20 @@ class DependencySet(object):
     Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
 
-  def get_overlap(self, enriched):
+  def get_overlap(self):
     """Return intersection of genes in data and genes in enrichment.
 
     Returns:
       set([str]) of shared genes
     """
-    shared_set = enriched.genes & set(self.varlist)
+    shared_set = self.enriched.genes & set(self.varlist)
     return shared_set
 
-  def compare(self, name, enriched, limit=None):
+  def compare(self, name, limit=None):
     """Compare a dependency ranking with an enriched set of pairs.
 
     Args:
       name: str in self.dependencies
-      enriched: EnrichedSet 
       limit: int of pairs to check. None=check all pairs
       plot: bool if to save top K plots of confirmed pairs.
     Returns:
@@ -202,21 +205,47 @@ class DependencySet(object):
     # M=values, Q=ranks
     M, Q = self.dependencies[name]
 
+    Named_M = NamedSymmetricMatrix(var_list=self.varlist, matrix=M)
+
+    # Do not count values ranked exactly zero for MIC
+    if name == 'MIC':
+      n_correlation_rank = len(filter(None, M))
+    else:
+      n_correlation_rank = len(M)
+      
+    # All enriched pairs in overlapping set are confirmed
+    n_total_confirmed = 0
+    overlapping_genes_set = self.get_overlap()
+    for x,y in self.enriched.pairs:
+      if x in overlapping_genes_set and y in overlapping_genes_set:
+        # Only confirm MIC pairs with values greater than 0
+        if name == 'MIC' and Named_M.get(x,y) != 0:
+          n_total_confirmed += 1
+        else:
+          n_total_confirmed += 1
+
+    print n_total_confirmed
+    print len(overlapping_genes_set)
+    print len(self.enriched.pairs)
+
+    # If no limit, count all pairs.
     if limit is None:
       limit = len(M)
-      
+
+    # For the top `limit` pairs, compute enrichment
     for i in xrange(1,limit+1):
       idx = Q[-i]
       x, y = inv_sym_idx(idx, self.n)
       pair = sorted((self.varlist[x], self.varlist[y]))
       
       # if both gene name are not in the enriched list, skip
-      if not (pair[0] in enriched.genes and pair[1] in enriched.genes):
+      if not (pair[0] in self.enriched.genes and pair[1] in self.enriched.genes):
 	continue
       n_counted += 1
 
+      # Count pairs in enrichment set.
       assert pair[0] < pair[1]
-      if "%s,%s" % (pair[0], pair[1]) in enriched.pairs_hash:
+      if "%s,%s" % (pair[0], pair[1]) in self.enriched.pairs_hash:
 	n_confirmed += 1
 	# build dict of confirmation record
 	r = {
@@ -233,8 +262,7 @@ class DependencySet(object):
 	  r['mic-pcc2'] = r['mic'] - r['pcc2']
 
 	# update enrichment
-	tmp = (n_confirmed / self.N_TOTAL_CONFIRMED) / \
-	  (i / self.N_CORRELATION_RANKS)
+	tmp = (n_confirmed / n_total_confirmed) / (i / n_correlation_rank)
 	if tmp > folder_enrich:
 	  folder_enrich = tmp
 	r['curr_folder'] = tmp
