@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import division
-"""Perform gene enrichment.
+"""Gene pair enrichment.
 
 TODO: 
   - convert all files to "array objects"
@@ -13,6 +13,7 @@ from scipy.spatial.distance import squareform
 http://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.distance.squareform.html
 
 Load matlab data
+import scipy.io as sio
 M = sio.loadmat('gse25935-matlab-correlations-all.mat') #WARNING! REMOVE COLS FROM OUTLIER PATIENT IN CORRESPONDING DATA!
 NOTE: this may load M as a dictionary if .mat contains multiple files.
 """
@@ -20,7 +21,10 @@ from scipy.spatial.distance import squareform
 import numpy as np
 from py_symmetric_matrix import *
 import re
+import sys
 
+
+RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman'])
 
 # pattern to select gene name from minitab file
 RX_GENE_NAME = re.compile("uniprotkb:([^)]*)\(gene name\)")
@@ -128,6 +132,15 @@ class EnrichedSet(object):
       x, y = y, x
     return "%s,%s" % (x, y) in self.pairs_hash
 
+def varlist_from_file(fname):
+  """Return cleaned list of variable names from file.
+
+  Args:
+    fname: str of filepath to newline-separated list of ordered var names
+  Returns:
+    [str] of list of variable names
+  """
+  return [clean(s) for s in open(fname)]
 
 class DependencySet(object):
   """Dependecy matrices with rank order and variable lists.
@@ -136,7 +149,7 @@ class DependencySet(object):
     be in the same order as the row order of .tab variable list.
 
   Attributes:
-    varlist: [str] of sorted variable names corresponding to matrices.
+    varlist: [str] of cleaned, ordered var names corresponding to dep. matrices.
     n: int of number of variables (size of matrix in rows)
     dependencies: {str=>(np.array(float), np.array(float)} of 
       relation=>(Value_Matrix, Rank_Matrix)
@@ -145,24 +158,24 @@ class DependencySet(object):
   """
   PLOT_TOP_K = 200
 
-  def __init__(self, enriched, varlist_filename=None, varlist=None):
+  def __init__(self, enriched, varlist_filename):
     """Initialize dependency set with either filename or varlist.
     Filename can either be a .tab matrix or [str] list but not both.
 
     Args:
       enriched: obj of `EnrichedSet`
       varlist_filename: str of path to ordered list of variables
-      varlist: [str] of variable names
     """
-    assert bool(varlist_filename) != bool(varlist)
     if varlist_filename:
       self.varlist = tab_to_varlist(varlist_filename)
     else:
-      self.varlist = varlist
+      self.varlist = None
     self.enriched = enriched
-    
     self.dependencies = {}
-    self.n = len(self.varlist)
+    if self.varlist:
+      self.n = len(self.varlist)
+    else:
+      self.n = None
   
   def add(self, name, similarity_fname, rank_fname):
     """Add a dependency matrix.
@@ -178,22 +191,13 @@ class DependencySet(object):
     Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
 
-  def get_overlap(self):
-    """Return intersection of genes in data and genes in enrichment.
-
-    Returns:
-      set([str]) of shared genes
-    """
-    shared_set = self.enriched.genes & set(self.varlist)
-    return shared_set
-
-  def compare(self, name, limit=None):
+  def compare(self, name, limit=None, varlist=None):
     """Compare a dependency ranking with an enriched set of pairs.
 
     Args:
       name: str in self.dependencies
       limit: int of pairs to check. None=check all pairs
-      plot: bool if to save top K plots of confirmed pairs.
+      varlist: [str] of variable list different for overall object (hack, optional)
     Returns:
       [{str:var}] of enriched dependencies in decreasing dependencies order
     """
@@ -201,32 +205,42 @@ class DependencySet(object):
     n_counted = 0
     n_confirmed = 0
     folder_enrich = -1
+
+    # Handle misordered matrices (e.g., MIC for GSE25935)
+    if varlist is None:
+      assert self.varlist
+      varlist = self.varlist
+    else:
+      assert type(varlist) == list
     
     # M=values, Q=ranks
     M, Q = self.dependencies[name]
 
-    Named_M = NamedSymmetricMatrix(var_list=self.varlist, matrix=M)
+    Named_M = NamedSymmetricMatrix(var_list=varlist, matrix=M, store_diagonal=False)
+    
+    # Do not count values ranked exactly zero
+    n_correlation_rank = len(M)
 
-    # Do not count values ranked exactly zero for MIC
-    if name == 'MIC':
-      n_correlation_rank = len(filter(None, M))
-    else:
-      n_correlation_rank = len(M)
+    print 'n_correlation_rank: ', n_correlation_rank
       
     # All enriched pairs in overlapping set are confirmed
     n_total_confirmed = 0
-    overlapping_genes_set = self.get_overlap()
+    overlapping_genes_set = self.enriched.genes & set(varlist)
+    print 'len(varlist)', len(varlist)
+    print 'len(overlapping_genes_set)', len(overlapping_genes_set)
+    print 'len(self.enriched.pairs)', len(self.enriched.pairs)
+    
     for x,y in self.enriched.pairs:
       if x in overlapping_genes_set and y in overlapping_genes_set:
         # Only confirm MIC pairs with values greater than 0
-        if name == 'MIC' and Named_M.get(x,y) != 0:
+        assert x in varlist
+        assert y in varlist
+        if Named_M.get(x,y):
           n_total_confirmed += 1
         else:
-          n_total_confirmed += 1
+          print "bad?", x, y, Named_M.get(x,y)
 
-    print n_total_confirmed
-    print len(overlapping_genes_set)
-    print len(self.enriched.pairs)
+    print 'n_total_confirmed', n_total_confirmed
 
     # For the top `limit` pairs, compute enrichment
     for i in xrange(1,len(M)+1):
@@ -235,8 +249,16 @@ class DependencySet(object):
         break
       
       idx = Q[-i]
-      x, y = inv_sym_idx(idx, self.n)
-      pair = sorted((self.varlist[x], self.varlist[y]))
+      try:
+        x, y = inv_sym_idx(idx, len(varlist))
+      except ValueError:
+        print "???", i, Q[-1], idx, M[idx]
+        
+      try:
+        pair = sorted((varlist[x], varlist[y]))
+      except TypeError:
+        print x, y
+        sys.exit(1)
       
       # if both gene name are not in the enriched list, skip
       if not (pair[0] in self.enriched.genes and pair[1] in self.enriched.genes):
@@ -266,7 +288,6 @@ class DependencySet(object):
 	if tmp > folder_enrich:
 	  folder_enrich = tmp
 	r['curr_folder'] = tmp
-	r['max_folder'] = folder_enrich
 	
 	# append record to list of matches
 	top_enriched.append(r)

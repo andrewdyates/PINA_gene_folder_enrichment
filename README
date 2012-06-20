@@ -1,2 +1,5 @@
 Compute gene ranking enrichment.
 
+USE:
+
+script.py
