@@ -209,6 +209,7 @@ class DependencySet(object):
     n_counted = 0
     n_confirmed = 0
     folder_enrich = -1
+    self.meta[name] = {}
 
     # Handle misordered matrices (e.g., MIC for GSE25935)
     if varlist is None:
@@ -255,8 +256,11 @@ class DependencySet(object):
       n_counted += 1
       
       idx = Q[-i]
-      x, y = inv_sym_idx(idx, len(varlist))
-      pair = sorted((varlist[x], varlist[y]))
+      try:
+        x, y = inv_sym_idx(idx, len(varlist))
+        pair = sorted((varlist[x], varlist[y]))
+      except Exception, e:
+        print "ERROR: inverse index failed. name: %s, n: %d, i: %d, idx: %d. " % (name, len(varlist), i, idx), e
       
       # if both gene name are not in the enriched list, skip
       if not (pair[0] in self.enriched.genes and pair[1] in self.enriched.genes):
