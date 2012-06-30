@@ -64,7 +64,8 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     r = depends.compare(k, limit=limit, varlist=varlist)
     # print results
     print "DEPENDENCY:", k
-    print "NUMBER OF MATCHES, LIMIT=%s", (len(r), limit)
+    print "NUMBER OF MATCHES:", len(r)
+    print "LIMIT:", limit
     print "META:", depends.meta[k]
     print "MATCHES:", r
     print "===\n"
