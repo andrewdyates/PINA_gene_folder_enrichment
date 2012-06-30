@@ -21,7 +21,6 @@ from scipy.spatial.distance import squareform
 import numpy as np
 from py_symmetric_matrix import *
 import re
-import sys
 
 
 RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2'])
@@ -153,8 +152,9 @@ class DependencySet(object):
   Attributes:
     varlist: [str] of cleaned, ordered var names corresponding to dep. matrices.
     n: int of number of variables (size of matrix in rows)
+    meta: {str=>{str:value}} of `relation_name: attribute=>value`
     dependencies: {str=>(np.array(float), np.array(float)} of 
-      relation=>(Value_Matrix, Rank_Matrix)
+      relation_name=>(Value_Matrix, Rank_Matrix)
       matrices are symmetric representations; use sym_idx
     enriched: corresponding `EnrichedSet` object
   """
@@ -174,6 +174,7 @@ class DependencySet(object):
       self.varlist = None
     self.enriched = enriched
     self.dependencies = {}
+    self.meta = {}
     if self.varlist:
       self.n = len(self.varlist)
     else:
@@ -192,8 +193,9 @@ class DependencySet(object):
     M = np.load(similarity_fname)
     Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
+    self.meta[name] = {}
 
-  def compare(self, name, limit=None, varlist=None, report=False):
+  def compare(self, name, limit=None, varlist=None):
     """Compare a dependency ranking with an enriched set of pairs.
 
     Args:
@@ -223,27 +225,26 @@ class DependencySet(object):
     # Do not count values ranked exactly zero
     n_correlation_rank = len(M)
 
-    print 'n_correlation_rank: ', n_correlation_rank
+    self.meta[name]['n_correlation_rank'] = n_correlation_rank
       
     # All enriched pairs in overlapping set are confirmed
     n_total_confirmed = 0
+    n_zeros = 0
     overlapping_genes_set = self.enriched.genes & set(varlist)
-    print 'len(varlist)', len(varlist)
-    print 'len(overlapping_genes_set)', len(overlapping_genes_set)
-    print 'len(self.enriched.pairs)', len(self.enriched.pairs)
+    self.meta[name]['len_varlist'] = len(varlist)
+    self.meta[name]['overlapping_genes_set'] = len(overlapping_genes_set)
     
     for x,y in self.enriched.pairs:
       if x in overlapping_genes_set and y in overlapping_genes_set:
         # Only confirm MIC pairs with values greater than 0
         assert x in varlist
         assert y in varlist
+        n_total_confirmed += 1
         if Named_M.get(x,y):
-          n_total_confirmed += 1
-        else:
-          if report:
-            print "bad?", x, y, Named_M.get(x,y)
+          n_zeros += 1
 
-    print 'n_total_confirmed', n_total_confirmed
+    self.meta[name]['n_total_confirmed'] = n_total_confirmed
+    self.meta[name]['n_zeros'] = n_zeros
 
     # For the top `limit` pairs, compute enrichment
     for i in xrange(1,len(M)+1):
@@ -252,16 +253,8 @@ class DependencySet(object):
         break
       
       idx = Q[-i]
-      try:
-        x, y = inv_sym_idx(idx, len(varlist))
-      except ValueError:
-        print "???", i, Q[-1], idx, M[idx]
-        
-      try:
-        pair = sorted((varlist[x], varlist[y]))
-      except TypeError:
-        print x, y
-        sys.exit(1)
+      x, y = inv_sym_idx(idx, len(varlist))
+      pair = sorted((varlist[x], varlist[y]))
       
       # if both gene name are not in the enriched list, skip
       if not (pair[0] in self.enriched.genes and pair[1] in self.enriched.genes):
