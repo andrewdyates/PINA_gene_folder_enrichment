@@ -10,8 +10,7 @@ python script.py enriched_file=PINA_Homo_sapiens-20110628_minitab.txt tabdata_fi
 
 python script.py enriched_file=PINA_Homo_sapiens-20110628_minitab.txt tabdata_file=GSE25935.GPL4133.eQTL.tab limit=1000 pcc2=GSE25935.PCC2.matrix.npy,GSE25935.PCC2.matrix.sorted.npy,gse25935.varlist.txt mic=gse25935.mic.matrix.npy,gse25935.mic.matrix.argsorted.npy,gse25935.varlist.txt
 
-python script.py enriched_file=PINA_Homo_sapiens-20110628_minitab.txt limit=1000 tabdata_file= spearman=~/Desktop/yang_ppi_enrichment/yang_gse2034_spearman_squareform.npy,~/Desktop/yang_ppi_enrichment/yang_gse2034_spearman_squareform_sorted.npy,~/Desktop/yang_ppi_enrichment/GeneCoexpWang_genelist.txt
-
+python script.py enriched_file=PINA_Homo_sapiens-20110628_minitab.txt limit=1000 tabdata_file= spearman=/Users/qq/Desktop/yang_ppi_enrichment/yang_gse2034_spearman_squareform.npy,/Users/qq/Desktop/yang_ppi_enrichment/yang_gse2034_spearman_squareform_sorted.npy,/Users/qq/Desktop/yang_ppi_enrichment/GeneCoexpWang_genelist.txt
 """
 from __init__ import *
 import sys
