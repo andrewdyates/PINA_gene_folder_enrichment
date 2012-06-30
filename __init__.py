@@ -24,7 +24,7 @@ import re
 import sys
 
 
-RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman'])
+RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2'])
 
 # pattern to select gene name from minitab file
 RX_GENE_NAME = re.compile("uniprotkb:([^)]*)\(gene name\)")
@@ -35,13 +35,15 @@ GENE_RENAMES = {
   'STRAD BETA': 'STRADB',
   'STRAD ALPHA': 'STRADA',
 }
-def clean(s):
+def clean(s, report=False):
   """Standardize gene names to be all caps, alphanumeric."""
   s = re.sub('[^a-zA-Z0-9 ]', '', s.upper())
   if s in GENE_RENAMES:
     s = GENE_RENAMES[s]
   # Loudly complain about spaces so that they can be handled specially
-  assert ' ' not in s, s
+  #assert ' ' not in s, s
+  if report and ' ' in s:
+    print "space in:", s
   return s
 
 def matlab_to_squareform(M):
@@ -191,7 +193,7 @@ class DependencySet(object):
     Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
 
-  def compare(self, name, limit=None, varlist=None):
+  def compare(self, name, limit=None, varlist=None, report=False):
     """Compare a dependency ranking with an enriched set of pairs.
 
     Args:
@@ -238,7 +240,8 @@ class DependencySet(object):
         if Named_M.get(x,y):
           n_total_confirmed += 1
         else:
-          print "bad?", x, y, Named_M.get(x,y)
+          if report:
+            print "bad?", x, y, Named_M.get(x,y)
 
     print 'n_total_confirmed', n_total_confirmed
 
