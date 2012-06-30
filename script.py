@@ -53,7 +53,7 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     depends.add(k, v[0], v[1])
 
   # For each dependency matrix, compare rankings
-  results = []
+  results = {}
   for k, v in np_matrices.items():
     # handle custom varlists (hack)
     if len(v) == 3:
@@ -64,12 +64,12 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     # r is [{str:var}] of enriched dependencies in decreasing dependencies order
     #  where each element is a dict including var names, enrichment, etc.
     r = depends.compare(k, limit=limit, varlist=varlist)
-    results.append(r)
+    results[k] = r
 
   # TODO HANDLE RESULTS
-  for r in results: 
-    print len(r)
-  print results
+  for k,r in results.items(): 
+    print k, len(r),r
+    print "===\n"
 
   # print "merged pcc", len(r_merged)
   # print "merged mic", len(r_merged_mic)
