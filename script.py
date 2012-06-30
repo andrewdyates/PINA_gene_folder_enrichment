@@ -63,11 +63,14 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     # r is [{str:var}] of enriched dependencies in decreasing dependencies order
     #  where each element is a dict including var names, enrichment, etc.
     r = depends.compare(k, limit=limit, varlist=varlist)
-    results[k] = r
+     results[k] = r
 
   # TODO HANDLE RESULTS
   for k,r in results.items(): 
-    print k, len(r),r
+    print k
+    print len(r)
+    print depends.meta[k]
+    print r
     print "===\n"
 
   # print "merged pcc", len(r_merged)

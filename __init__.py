@@ -193,10 +193,10 @@ class DependencySet(object):
     M = np.load(similarity_fname)
     Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
-    self.meta[name] = {}
 
   def compare(self, name, limit=None, varlist=None):
     """Compare a dependency ranking with an enriched set of pairs.
+    Adds information about dependency to 'meta' attribute
 
     Args:
       name: str in self.dependencies
@@ -247,10 +247,12 @@ class DependencySet(object):
     self.meta[name]['n_zeros'] = n_zeros
 
     # For the top `limit` pairs, compute enrichment
+    n_counted = 0
     for i in xrange(1,len(M)+1):
       # Break if n_counted is equal to limit. If no limit, count all pairs
       if limit is not None and n_counted >= limit:
         break
+      n_counted += 1
       
       idx = Q[-i]
       x, y = inv_sym_idx(idx, len(varlist))
