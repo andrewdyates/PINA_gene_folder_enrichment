@@ -194,6 +194,7 @@ class DependencySet(object):
     Q = np.load(rank_fname)
     self.dependencies[name] = (M, Q)
 
+
   def compare(self, name, limit=None, varlist=None):
     """Compare a dependency ranking with an enriched set of pairs.
     Adds information about dependency to 'meta' attribute
