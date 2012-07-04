@@ -23,7 +23,7 @@ from py_symmetric_matrix import *
 import re
 
 
-RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2'])
+RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2', 'max_spearman2_dcor2'])
 
 # pattern to select gene name from minitab file
 RX_GENE_NAME = re.compile("uniprotkb:([^)]*)\(gene name\)")
@@ -258,7 +258,7 @@ class DependencySet(object):
       
       idx = Q[-i]
       try:
-        x, y = inv_sym_idx(idx, len(varlist))
+        x, y = inv_sym_idx(idx, len(varlist), with_diagonal=False)
         pair = sorted((varlist[x], varlist[y]))
       except Exception, e:
         print "ERROR: inverse index failed. name: %s, n: %d, i: %d, idx: %d. " % (name, len(varlist), i, idx), e
