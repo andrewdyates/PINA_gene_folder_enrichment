@@ -49,7 +49,9 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
   All_R = []
 
   for dep_name, d in D['dependencies'].items():
-    depends.add(dep_name, d['values_file'], d['argsorted_file'])
+    v_fname = os.path.join(d['dir'], d['values_file'])
+    a_fname = os.path.join(d['dir'], d['argsorted_file'])
+    depends.add(dep_name, v_fname, a_fname)
 
   # For each dependency matrix, compare rankings
   for dep_name in D['dependencies']:
