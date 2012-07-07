@@ -25,7 +25,7 @@ from py_symmetric_matrix import *
 import re
 
 #this should be removed
-RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2', 'max_spearman2_dcor2', 'max_all'])
+RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2', 'max_spearman2_dcor2', 'max_all', 'pcc_floor', 'random'])
 
 # pattern to select gene name from minitab file
 RX_GENE_NAME = re.compile("uniprotkb:([^)]*)\(gene name\)")
