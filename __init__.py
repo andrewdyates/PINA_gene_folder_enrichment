@@ -16,6 +16,8 @@ Load matlab data
 import scipy.io as sio
 M = sio.loadmat('gse25935-matlab-correlations-all.mat') #WARNING! REMOVE COLS FROM OUTLIER PATIENT IN CORRESPONDING DATA!
 NOTE: this may load M as a dictionary if .mat contains multiple files.
+
+LIMIT IS FOR NUMBER OF PAIRS CONSIDERED WITH BOTH GENES IN ENRICHED SET!
 """
 from scipy.spatial.distance import squareform
 import numpy as np
@@ -249,12 +251,11 @@ class DependencySet(object):
     self.meta[name]['n_zeros'] = n_zeros
 
     # For the top `limit` pairs, compute enrichment
-    n_counted = 0
+    n_counted = 0 # number of pairs with both genes in enriched set
     for i in xrange(1,len(M)+1):
       # Break if n_counted is equal to limit. If no limit, count all pairs
       if limit is not None and n_counted >= limit:
         break
-      n_counted += 1
       
       idx = Q[-i]
       try:
