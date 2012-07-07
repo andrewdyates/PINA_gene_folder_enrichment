@@ -32,9 +32,9 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
   if type(limit) == str:
     limit = int(limit)
   assert limit > 0
-  assert os.path.exists(enriched_file)
-  assert os.path.exists(tabdata_file)
-  assert os.path.exists(np_matrices_json)
+  assert enriched_file and os.path.exists(enriched_file), enriched_file
+  assert tabdata_file and os.path.exists(tabdata_file), tabdata_file
+  assert np_matrices_json and os.path.exists(np_matrices_json), np_matrices_json
 
   # Load enriched set of pairs.
   enriched = EnrichedSet(enriched_file)
