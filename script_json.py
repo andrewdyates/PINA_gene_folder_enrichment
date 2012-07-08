@@ -19,7 +19,7 @@ import json
 import os
 
 
-def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matrices_json=None):
+def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matrices_json=None, randomize=False):
   """Compute top K enriched pairs from numpy matrices and known pair list.
 
   Args:
@@ -28,6 +28,7 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
       VARIABLE NAMES MUST BE IN SAME ORDER AS IN NP_MATRICES!
     limit: int of number of pairs to consider
     np_matrices_json: str of filepath to dependency matrix definitions
+    randomize: bool if to use random pairs from PINA list
   """
   if type(limit) == str:
     limit = int(limit)
@@ -37,7 +38,10 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
   assert np_matrices_json and os.path.exists(np_matrices_json), np_matrices_json
 
   # Load enriched set of pairs.
-  enriched = EnrichedSet(enriched_file)
+  if not randomize:
+    enriched = EnrichedSet(enriched_file)
+  else:
+    enriched = RandomEnrichedSet(enriched_file)
 
   # Load variable list in order from tab data row variable names.
   depends = DependencySet(enriched, varlist_filename=tabdata_file)
