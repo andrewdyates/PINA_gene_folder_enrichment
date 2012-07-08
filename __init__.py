@@ -18,11 +18,14 @@ M = sio.loadmat('gse25935-matlab-correlations-all.mat') #WARNING! REMOVE COLS FR
 NOTE: this may load M as a dictionary if .mat contains multiple files.
 
 LIMIT IS FOR NUMBER OF PAIRS CONSIDERED WITH BOTH GENES IN ENRICHED SET!
+
+WARNING: This is a hacky implemenation and should be redone.
 """
 from scipy.spatial.distance import squareform
 import numpy as np
 from py_symmetric_matrix import *
 import re
+import random
 
 #this should be removed
 RECOGNIZED_MATRICES = set(['pcc2', 'mic', 'spearman', 'kendall', 'dcor', 'pcc', 'nonlin', 'mas', 'spearman2', 'max_spearman2_dcor2', 'max_all', 'pcc_floor', 'random'])
@@ -144,6 +147,28 @@ def varlist_from_file(fname):
     [str] of list of variable names
   """
   return [clean(s) for s in open(fname)]
+
+
+class RandomEnrichedSet(EnrichedSet):
+  """Generate random pairs given list of variables from PINA file."""
+  def __init__(self, filename):
+    super(RandomEnrichedSet, self).__init__(filename)
+    # replace self.pairs and self.pairs_hash with randomly generated sets of equal length
+    n_pairs = len(self.pairs_hash)
+    n = len(self.genes)
+    gene_list = list(self.genes)
+    self.pairs = []
+    self.pairs_hash = set()
+    print int(n*(n-1)/2)
+    print n_pairs
+    
+    idxs = random.sample(xrange(int(n*(n-1)/2)), n_pairs)
+    for i in idxs:
+      x, y = inv_sym_idx(i, n)
+      gene_x, gene_y = sorted((gene_list[x], gene_list[y]))
+      self.pairs.append((gene_x, gene_y))
+      self.pairs_hash.add("%s,%s"%(gene_x, gene_y))
+    
 
 class DependencySet(object):
   """Dependecy matrices with rank order and variable lists.
