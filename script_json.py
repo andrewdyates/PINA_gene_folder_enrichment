@@ -19,7 +19,7 @@ import json
 import os
 
 
-def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matrices_json=None, randomize=False):
+def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matrices_json=None, randomize=False, output_file=None):
   """Compute top K enriched pairs from numpy matrices and known pair list.
 
   Args:
@@ -29,6 +29,7 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     limit: int of number of pairs to consider
     np_matrices_json: str of filepath to dependency matrix definitions
     randomize: bool if to use random pairs from PINA list
+    output_file: str of output file, else print to stdout
   """
   if type(limit) == str:
     limit = int(limit)
@@ -36,6 +37,9 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
   assert enriched_file and os.path.exists(enriched_file), enriched_file
   assert tabdata_file and os.path.exists(tabdata_file), tabdata_file
   assert np_matrices_json and os.path.exists(np_matrices_json), np_matrices_json
+  if output_file is not None:
+    assert output_file
+    assert os.path.exists(os.path.dirname(output_file))
 
   # Load enriched set of pairs.
   if not randomize:
@@ -73,7 +77,10 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     All_R.append(R)
 
   # OUTPUT AT END OF LOOP
-  print json.dumps(All_R)
+  if not output_file:
+    print json.dumps(All_R)
+  else:
+    json.dump(obj=All_R, fp=open(output_file, 'w'))
   
 
 if __name__ == "__main__":
