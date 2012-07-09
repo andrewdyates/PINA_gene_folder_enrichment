@@ -81,6 +81,7 @@ def print_enrichments(enriched_file=None, tabdata_file=None, limit=None, np_matr
     print json.dumps(All_R)
   else:
     json.dump(obj=All_R, fp=open(output_file, 'w'))
+    print "Wrote output to %s." % output_file
   
 
 if __name__ == "__main__":
